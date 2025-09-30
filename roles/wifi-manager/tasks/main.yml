@@ -32,11 +32,9 @@
   become_user: "{{ app_user }}"
   shell: pm2 delete wifi-frontend || true
 
-- name: Start frontend with PM2 (use absolute paths)
+- name: Start frontend with PM2
   become_user: "{{ app_user }}"
   shell: |
-    cd {{ app_dir }}/frontend
     /usr/bin/npx serve -s dist -l 3000
     pm2 start /usr/bin/npx --name wifi-frontend -- serve -s dist -l 3000
     pm2 save
-
