@@ -31,13 +31,6 @@
 - name: Ensure PM2 frontend is clean
   become_user: "{{ app_user }}"
   shell: pm2 delete wifi-frontend || true
-
-- name: Build PM2 frontend
-  become_user: "{{ app_user }}"
-  shell: |
-    cd {{ app_dir }}/frontend
-    npm install
-    npm run build
   
 - name: Start frontend with PM2
   become_user: "{{ app_user }}"
