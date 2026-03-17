@@ -9,23 +9,14 @@
     #tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTH_KEY') }}"  # Set via env or hardcode
     
   pre_tasks:
-    - name: Remove incompatible Jinja2 plugins
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /usr/lib/python3/dist-packages/ansible/plugins/filter/core.py
-        - /usr/lib/python3/dist-packages/ansible/plugins/filter/mathstuff.py
-      ignore_errors: yes
 
     - name: Fix Jinja2 compatibility issue
       pip:
         name: jinja2
         version: "3.1.5"
         executable: pip3
-        extra_args: --force-reinstall
+        extra_args: --upgrade
       ignore_errors: yes
-
     - name: Update apt cache
       apt:
         update_cache: yes

@@ -3,6 +3,7 @@
   apt:
     name:
       - git
+      - python3-pip
     state: present
     update_cache: yes
 
@@ -11,34 +12,87 @@
   git:
     repo: "{{ repo_url }}"
     dest: "{{ app_dir }}"
-    version: main
+    version: development
     force: yes
+  register: git_result
 
-- name: Install Python3 pip
-  apt:
-    name: python3-pip
-    state: present
-    update_cache: yes
+- name: Ensure logs directory exists
+  file:
+    path: "{{ app_dir }}/logs"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+
+- name: Create logs .gitkeep file
+  file:
+    path: "{{ app_dir }}/logs/.gitkeep"
+    state: touch
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+
+- name: Update .version file to current git commit
+  shell: git rev-parse --short HEAD > {{ app_dir }}/.version
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+
+- name: Display current version
+  shell: cat {{ app_dir }}/.version
+  register: version_output
+  changed_when: false
+
+- name: Show installed version
+  debug:
+    msg: "Screen Manager version: {{ version_output.stdout }}"
 
 - name: Install Python dependencies
   pip:
-    requirements: "{{ app_dir }}/src/requirements.txt"
+    requirements: "{{ app_dir }}/requirements.txt"
     executable: pip3
+    extra_args: --break-system-packages
+  when: requirements_file.stat.exists
+  ignore_errors: yes
+
+- name: Check if requirements.txt exists
+  stat:
+    path: "{{ app_dir }}/requirements.txt"
+  register: requirements_file
+
+- name: Install Python dependencies if requirements exists
+  pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    executable: pip3
+    extra_args: --break-system-packages
+  when: requirements_file.stat.exists
+  ignore_errors: yes
+
+- name: Fix ownership of screen-manager directory
+  file:
+    path: "{{ app_dir }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    recurse: yes
+
+- name: Add git safe directory
+  command: git config --global --add safe.directory {{ app_dir }}
+  become_user: "{{ app_user }}"
+  changed_when: false
 
 - name: Install systemd service file for screen
   copy:
-    src: screen.service   # must be inside roles/screen-manager/files/
+    src: screen.service
     dest: /etc/systemd/system/screen.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
+  notify: 
+    - Reload systemd
+    - Restart screen service
 
-- name: Reload systemd
-  systemd:
-    daemon_reload: yes
-
-- name: Enable and restart screen service
+- name: Enable screen service
   systemd:
     name: screen.service
     enabled: yes
-    state: restarted
+    daemon_reload: yes

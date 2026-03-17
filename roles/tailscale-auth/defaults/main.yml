@@ -1,0 +1,7 @@
+---
+tailscale_oauth_client_id: "{{ vault_tailscale_oauth_client_id }}"
+tailscale_oauth_client_secret: "{{ vault_tailscale_oauth_client_secret }}"
+tailscale_auth_key_path: /etc/tailscale/auth_key
+tailscale_key_metadata_path: /etc/tailscale/key_metadata.json
+tailscale_key_validity_days: 30
+tailscale_hostname: "orion-{{ ansible_hostname }}"

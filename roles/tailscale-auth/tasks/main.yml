@@ -1,0 +1,109 @@
+---
+- name: Create Tailscale config directory
+  file:
+    path: /etc/tailscale
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Install required packages for OAuth
+  apt:
+    name:
+      - curl
+      - jq
+    state: present
+
+- name: Check if auth key exists and is valid
+  stat:
+    path: "{{ tailscale_key_metadata_path }}"
+  register: key_metadata
+
+- name: Load existing key metadata
+  slurp:
+    src: "{{ tailscale_key_metadata_path }}"
+  register: key_metadata_content
+  when: key_metadata.stat.exists
+  failed_when: false
+
+- name: Parse key expiration
+  set_fact:
+    key_created_at: "{{ (key_metadata_content.content | b64decode | from_json).created_at | default(0) }}"
+    current_timestamp: "{{ ansible_date_time.epoch }}"
+  when: key_metadata.stat.exists
+
+- name: Calculate key age in days
+  set_fact:
+    key_age_days: "{{ ((current_timestamp | int) - (key_created_at | int)) / 86400 | int }}"
+  when: key_metadata.stat.exists
+
+- name: Determine if new key is needed
+  set_fact:
+    need_new_key: "{{ not key_metadata.stat.exists or (key_age_days | int) >= tailscale_key_validity_days }}"
+
+- name: Generate new Tailscale auth key via OAuth
+  shell: |
+    set -e
+    
+    # Get OAuth token
+    OAUTH_TOKEN=$(curl -s -f -d "client_id={{ tailscale_oauth_client_id }}" \
+                              -d "client_secret={{ tailscale_oauth_client_secret }}" \
+                              https://api.tailscale.com/api/v2/oauth/token | jq -r '.access_token')
+    
+    if [ -z "$OAUTH_TOKEN" ] || [ "$OAUTH_TOKEN" = "null" ]; then
+      echo "Failed to get OAuth token"
+      exit 1
+    fi
+    
+    # Create auth key (ephemeral, reusable, 90 days validity)
+    AUTH_KEY=$(curl -s -f -X POST \
+      -H "Authorization: Bearer $OAUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "capabilities": {
+          "devices": {
+            "create": {
+              "reusable": true,
+              "ephemeral": false,
+              "preauthorized": true,
+              "tags": ["tag:orion"]
+            }
+          }
+        },
+        "expirySeconds": 7776000
+      }' \
+      https://api.tailscale.com/api/v2/tailnet/-/keys | jq -r '.key')
+    
+    if [ -z "$AUTH_KEY" ] || [ "$AUTH_KEY" = "null" ]; then
+      echo "Failed to create auth key"
+      exit 1
+    fi
+    
+    echo "$AUTH_KEY"
+  register: new_auth_key
+  when: need_new_key
+  no_log: true
+
+- name: Save auth key to file
+  copy:
+    content: "{{ new_auth_key.stdout }}"
+    dest: "{{ tailscale_auth_key_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when: need_new_key
+  no_log: true
+
+- name: Save key metadata
+  copy:
+    content: |
+      {
+        "created_at": {{ ansible_date_time.epoch }},
+        "validity_days": {{ tailscale_key_validity_days }}
+      }
+    dest: "{{ tailscale_key_metadata_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when: need_new_key
+

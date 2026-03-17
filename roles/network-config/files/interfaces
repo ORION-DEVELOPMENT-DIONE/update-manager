@@ -1,0 +1,14 @@
+source /etc/network/interfaces.d/*
+# Network is managed by Network manager
+auto lo
+iface lo inet loopback
+
+#auto wlP2p33s0
+iface wlP2p33s0 inet dhcp
+#    address 192.168.4.1
+#    netmask 255.255.255.0
+#auto enP3p49s0
+#iface enP3p49s0 inet dhcp
+
+#auto enP4p65s0
+#iface enP4p65s0 inet dhcp

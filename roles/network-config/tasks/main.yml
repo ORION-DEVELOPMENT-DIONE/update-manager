@@ -1,0 +1,14 @@
+---
+- name: Deploy network interfaces configuration
+  copy:
+    src: interfaces
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  register: interfaces_config
+  notify: restart networking
+
+- name: Flush handlers
+  meta: flush_handlers

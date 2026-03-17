@@ -1,0 +1,38 @@
+---
+- name: Ensure dependencies installed
+  apt:
+    name:
+      - git
+      - python3-pip
+    state: present
+    update_cache: yes
+
+- name: Clone or update Screen Manager repo
+  become_user: "{{ app_user }}"
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: development
+    force: yes
+
+- name: Install Python dependencies
+  pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    executable: pip3
+    extra_args: --break-system-packages
+
+- name: Install systemd service file for screen
+  copy:
+    src: screen.service
+    dest: /etc/systemd/system/screen.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload systemd
+
+- name: Enable and restart screen service
+  systemd:
+    name: screen.service
+    enabled: yes
+    state: restarted
+    daemon_reload: yes

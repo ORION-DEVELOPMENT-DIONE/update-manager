@@ -1,0 +1,4 @@
+---
+tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTH_KEY') | default('') }}"
+tailscale_hostname: "orion-{{ ansible_hostname }}"
+tailscale_extra_args: "--accept-routes --ssh"
