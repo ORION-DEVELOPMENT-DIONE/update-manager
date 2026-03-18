@@ -17,6 +17,7 @@
         - /usr/lib/python3/dist-packages/ansible/plugins/filter/core.py
         - /usr/lib/python3/dist-packages/ansible/plugins/filter/mathstuff.py
       ignore_errors: yes
+      tags: always
 
     - name: Fix Jinja2 compatibility issue
       pip:
@@ -25,11 +26,13 @@
         executable: pip3
         extra_args: --force-reinstall
       ignore_errors: yes
+      tags: always
 
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
+        tags: always
       
     - name: Install required packages
       apt:
@@ -40,15 +43,41 @@
           - curl
           - jq
         state: present
+        tags: always
+
+    - name: Check if vault file exists
+      stat:
+        path: "{{ playbook_dir }}/group_vars/all/vault.yml"
+      register: vault_file
+      tags: always
+
+    - name: Load vault variables if vault file exists
+      include_vars:
+        file: "{{ playbook_dir }}/group_vars/all/vault.yml"
+      when: vault_file.stat.exists
+      tags: always
+      ignore_errors: yes
 
   roles:
-    - network-config
-    - tailscale-auth
-    - tailscale
-    - screen-manager
-    - auto-update
+    - role: network-config
+      tags: network
+      
+    - role: tailscale-auth
+      tags: tailscale
+      when: tailscale_oauth_client_id is defined
+      
+    - role: tailscale
+      tags: tailscale
+      when: tailscale_oauth_client_id is defined
+      
+    - role: screen-manager
+      tags: screen-manager
+      
+    - role: auto-update
+      tags: auto-update
 
   post_tasks:
     - name: Log provisioning completion
       shell: |
         echo "$(date): Provisioning completed successfully" >> /var/log/orion-provisioning.log
+      tags: always
