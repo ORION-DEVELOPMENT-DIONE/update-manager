@@ -12,6 +12,7 @@
     name:
       - curl
       - jq
+      - python3-json
     state: present
 
 - name: Check if auth key exists and is valid
@@ -30,6 +31,11 @@
   set_fact:
     key_created_at: "{{ (key_metadata_content.content | b64decode | from_json).created_at | default(0) }}"
     current_timestamp: "{{ ansible_date_time.epoch }}"
+  when: key_metadata.stat.exists
+
+- name: Extract created_at from metadata
+  set_fact:
+    key_created_at: "{{ (key_metadata_json | from_yaml).created_at | default(0) }}"
   when: key_metadata.stat.exists
 
 - name: Calculate key age in days
