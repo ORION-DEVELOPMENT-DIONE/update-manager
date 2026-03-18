@@ -12,7 +12,6 @@
     name:
       - curl
       - jq
-      - python3-json
     state: present
 
 - name: Check if auth key exists and is valid
