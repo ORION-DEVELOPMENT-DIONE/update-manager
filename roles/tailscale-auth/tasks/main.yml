@@ -15,36 +15,25 @@
     state: present
 
 - name: Check if auth key exists and is valid
-  stat:
-    path: "{{ tailscale_key_metadata_path }}"
-  register: key_metadata
-
-- name: Load existing key metadata
-  slurp:
-    src: "{{ tailscale_key_metadata_path }}"
-  register: key_metadata_content
-  when: key_metadata.stat.exists
-  failed_when: false
-
-- name: Parse key expiration
-  set_fact:
-    key_created_at: "{{ (key_metadata_content.content | b64decode | from_json).created_at | default(0) }}"
-    current_timestamp: "{{ ansible_date_time.epoch }}"
-  when: key_metadata.stat.exists
-
-- name: Extract created_at from metadata
-  set_fact:
-    key_created_at: "{{ (key_metadata_json | from_yaml).created_at | default(0) }}"
-  when: key_metadata.stat.exists
-
-- name: Calculate key age in days
-  set_fact:
-    key_age_days: "{{ ((current_timestamp | int) - (key_created_at | int)) / 86400 | int }}"
-  when: key_metadata.stat.exists
+  shell: |
+    if [ -f "{{ tailscale_key_metadata_path }}" ]; then
+      CREATED_AT=$(jq -r '.created_at' {{ tailscale_key_metadata_path }} 2>/dev/null || echo "0")
+      CURRENT_TIME=$(date +%s)
+      AGE_DAYS=$(( ($CURRENT_TIME - $CREATED_AT) / 86400 ))
+      if [ $AGE_DAYS -ge {{ tailscale_key_validity_days }} ]; then
+        echo "expired"
+      else
+        echo "valid"
+      fi
+    else
+      echo "missing"
+    fi
+  register: key_status
+  changed_when: false
 
 - name: Determine if new key is needed
   set_fact:
-    need_new_key: "{{ not key_metadata.stat.exists or (key_age_days | int) >= tailscale_key_validity_days }}"
+    need_new_key: "{{ key_status.stdout != 'valid' }}"
 
 - name: Generate new Tailscale auth key via OAuth
   shell: |
@@ -60,7 +49,7 @@
       exit 1
     fi
     
-    # Create auth key (ephemeral, reusable, 90 days validity)
+    # Create auth key
     AUTH_KEY=$(curl -s -f -X POST \
       -H "Authorization: Bearer $OAUTH_TOKEN" \
       -H "Content-Type: application/json" \
@@ -111,4 +100,3 @@
     group: root
     mode: '0600'
   when: need_new_key
-
