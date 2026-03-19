@@ -32,7 +32,7 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
-        tags: always
+      tags: always
       
     - name: Install required packages
       apt:
@@ -43,7 +43,7 @@
           - curl
           - jq
         state: present
-        tags: always
+      tags: always
 
     - name: Check if vault file exists
       stat:
