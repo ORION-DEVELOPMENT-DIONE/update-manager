@@ -7,6 +7,25 @@
     state: present
     update_cache: yes
 
+- name: Ensure orangepi user is in required groups for hardware access
+  user:
+    name: "{{ app_user }}"
+    groups: gpio,spi,i2c,dialout
+    append: yes
+
+- name: Check if .git directory has wrong ownership
+  stat:
+    path: "{{ app_dir }}/.git"
+  register: git_dir_stat
+
+- name: Remove entire screen-manager if .git has permission issues
+  file:
+    path: "{{ app_dir }}"
+    state: absent
+  when: 
+    - git_dir_stat.stat.exists
+    - git_dir_stat.stat.pw_name == 'root'
+
 - name: Clone or update Screen Manager repo
   become_user: "{{ app_user }}"
   git:
@@ -47,14 +66,6 @@
   debug:
     msg: "Screen Manager version: {{ version_output.stdout }}"
 
-- name: Install Python dependencies
-  pip:
-    requirements: "{{ app_dir }}/requirements.txt"
-    executable: pip3
-    extra_args: --break-system-packages
-  when: requirements_file.stat.exists
-  ignore_errors: yes
-
 - name: Check if requirements.txt exists
   stat:
     path: "{{ app_dir }}/requirements.txt"
@@ -64,21 +75,15 @@
   pip:
     requirements: "{{ app_dir }}/requirements.txt"
     executable: pip3
-    extra_args: --break-system-packages
   when: requirements_file.stat.exists
   ignore_errors: yes
 
-- name: Fix ownership of screen-manager directory
+- name: Ensure correct ownership
   file:
     path: "{{ app_dir }}"
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     recurse: yes
-
-- name: Add git safe directory
-  command: git config --global --add safe.directory {{ app_dir }}
-  become_user: "{{ app_user }}"
-  changed_when: false
 
 - name: Install systemd service file for screen
   copy:
@@ -87,12 +92,13 @@
     owner: root
     group: root
     mode: '0644'
-  notify: 
-    - Reload systemd
-    - Restart screen service
 
-- name: Enable screen service
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and restart screen service
   systemd:
     name: screen.service
     enabled: yes
-    daemon_reload: yes
+    state: restarted

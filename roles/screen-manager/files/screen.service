@@ -3,13 +3,22 @@ Description=Orion Screen Service
 After=network.target
 
 [Service]
+Type=simple
+User=orangepi
+Group=orangepi
 WorkingDirectory=/home/orangepi/screen-manager/src
-ExecStart=/home/orangepi/screen-manager/src/screen.sh
+ExecStart=/usr/bin/python3 /home/orangepi/screen-manager/src/main.py
 ExecStop=/bin/kill $MAINPID
 Restart=always
+RestartSec=10
 KillMode=control-group
 KillSignal=SIGTERM
 TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Allow access to GPIO/SPI as orangepi user
+SupplementaryGroups=gpio spi i2c
 
 [Install]
 WantedBy=multi-user.target
