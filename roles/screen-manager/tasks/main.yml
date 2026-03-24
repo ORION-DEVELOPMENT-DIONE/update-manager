@@ -7,24 +7,10 @@
     state: present
     update_cache: yes
 
-- name: Ensure orangepi user is in required groups for hardware access
-  user:
-    name: "{{ app_user }}"
-    groups: spi,i2c,dialout
-    append: yes
-
 - name: Check if .git directory has wrong ownership
   stat:
     path: "{{ app_dir }}/.git"
   register: git_dir_stat
-
-- name: Remove entire screen-manager if .git has permission issues
-  file:
-    path: "{{ app_dir }}"
-    state: absent
-  when: 
-    - git_dir_stat.stat.exists
-    - git_dir_stat.stat.pw_name == 'root'
 
 - name: Clone or update Screen Manager repo
   become_user: "{{ app_user }}"
@@ -78,7 +64,7 @@
   when: requirements_file.stat.exists
   ignore_errors: yes
 
-- name: Ensure correct ownership
+- name: Fix ownership to prevent git permission issues
   file:
     path: "{{ app_dir }}"
     owner: "{{ app_user }}"
