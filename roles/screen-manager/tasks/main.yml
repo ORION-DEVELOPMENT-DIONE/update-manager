@@ -10,7 +10,7 @@
 - name: Ensure orangepi user is in required groups for hardware access
   user:
     name: "{{ app_user }}"
-    groups: gpio,spi,i2c,dialout
+    groups: spi,i2c,dialout
     append: yes
 
 - name: Check if .git directory has wrong ownership
