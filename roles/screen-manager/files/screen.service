@@ -18,7 +18,7 @@ StandardOutput=journal
 StandardError=journal
 
 # Allow access to GPIO/SPI as orangepi user
-SupplementaryGroups=gpio spi i2c
+SupplementaryGroups=spi i2c
 
 [Install]
 WantedBy=multi-user.target
