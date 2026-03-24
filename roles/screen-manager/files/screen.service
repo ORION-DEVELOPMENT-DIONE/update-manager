@@ -17,8 +17,19 @@ TimeoutStopSec=10
 StandardOutput=journal
 StandardError=journal
 
+# Device access permissions
+DeviceAllow=/dev/gpiomem rw
+DeviceAllow=/dev/mem rw
+DeviceAllow=/dev/spidev0.0 rw
+DeviceAllow=/dev/spidev0.1 rw
+DeviceAllow=/dev/i2c-2 rw
+DeviceAllow=/dev/i2c-5 rw
+
+# Allow character devices (for GPIO)
+DeviceAllow=char-* rw
+
 # Allow access to GPIO/SPI as orangepi user
-SupplementaryGroups=spi i2c
+SupplementaryGroups=spi i2c dialout
 
 [Install]
 WantedBy=multi-user.target
