@@ -2,8 +2,8 @@
 - name: Ensure ansible-pull cronjob is installed
   cron:
     name: "Orion auto-update"
-    user: orangepi
-    job: "ansible-pull -U https://github.com/ORION-DEVELOPMENT-DIONE/update-manager.git local.yml -i localhost -o"
+    user: root
+    job: "ansible-pull -U https://github.com/ORION-DEVELOPMENT-DIONE/update-manager.git -C main local.yml -i localhost, -o >> /var/log/ansible-pull.log 2>&1"
     hour: 0
     minute: 0
 
