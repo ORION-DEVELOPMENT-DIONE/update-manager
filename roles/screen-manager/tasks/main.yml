@@ -7,19 +7,24 @@
     state: present
     update_cache: yes
 
-- name: Check if .git directory has wrong ownership
+- name: Check if screen-manager directory exists
   stat:
-    path: "{{ app_dir }}/.git"
-  register: git_dir_stat
+    path: "{{ app_dir }}"
+  register: screen_manager_dir
 
-- name: Clone or update Screen Manager repo
-  become_user: "{{ app_user }}"
+- name: Clone Screen Manager repo if it doesn't exist
   git:
     repo: "{{ repo_url }}"
     dest: "{{ app_dir }}"
     version: development
     force: yes
-  register: git_result
+  when: not screen_manager_dir.stat.exists
+  register: git_clone
+
+- name: Log update status
+  debug:
+    msg: "Screen Manager status: {{ update_status.stdout | default('Newly installed') }}"
+  when: screen_manager_dir.stat.exists
 
 - name: Ensure logs directory exists
   file:
@@ -37,11 +42,11 @@
     group: "{{ app_user }}"
     mode: '0644'
 
-- name: Update .version file to current git commit
-  shell: git rev-parse --short HEAD > {{ app_dir }}/.version
-  args:
-    chdir: "{{ app_dir }}"
-  become_user: "{{ app_user }}"
+#- name: Update .version file to current git commit
+#  shell: git rev-parse --short HEAD > {{ app_dir }}/.version
+#  args:
+#    chdir: "{{ app_dir }}"
+#  become_user: "{{ app_user }}"
 
 - name: Display current version
   shell: cat {{ app_dir }}/.version
@@ -78,13 +83,21 @@
     owner: root
     group: root
     mode: '0644'
+  register: service_file
 
-- name: Reload systemd
+- name: Reload systemd if service file changed
   systemd:
     daemon_reload: yes
+  when: service_file is changed
 
-- name: Enable and restart screen service
+- name: Enable and start screen service
   systemd:
     name: screen.service
     enabled: yes
+    state: started
+
+- name: Restart screen service only if service file changed
+  systemd:
+    name: screen.service
     state: restarted
+  when: service_file is changed
