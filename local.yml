@@ -69,6 +69,12 @@
     - role: tailscale
       tags: tailscale
       when: tailscale_oauth_client_id is defined
+
+    - role: influxdb
+      tags: influxdb
+
+    - role: grafana
+      tags: grafana
       
     - role: screen-manager
       tags: screen-manager

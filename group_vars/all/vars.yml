@@ -1,7 +1,21 @@
-
 ---
-
-tailscale_oauth_client_id: "kJwFz6atGX11CNTRL"
-
-tailscale_oauth_client_secret: "tskey-client-kJwFz6atGX11CNTRL-LaBKyVo7WQAifGnwkZSGQA2osNC4MW25G"
-
+# ============================================================================
+# Orion Update-Manager — Non-Secret Variables
+# ============================================================================
+#
+# SECURITY NOTE:
+# Tailscale OAuth credentials are stored in vault.yml (encrypted).
+# They are referenced via vault_tailscale_oauth_client_id and
+# vault_tailscale_oauth_client_secret in roles/tailscale-auth/defaults/main.yml.
+#
+# To edit vault secrets:
+#   ansible-vault edit group_vars/all/vault.yml
+#
+# To create a new vault (if starting fresh):
+#   ansible-vault create group_vars/all/vault.yml
+#   # Then add:
+#   #   vault_tailscale_oauth_client_id: "your-client-id"
+#   #   vault_tailscale_oauth_client_secret: "tskey-client-..."
+#
+# NEVER store secrets in this file. This file is committed to git unencrypted.
+# ============================================================================
