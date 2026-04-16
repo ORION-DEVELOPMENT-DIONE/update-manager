@@ -1,0 +1,18 @@
+---
+- name: Check if local secrets file exists
+  stat:
+    path: /etc/orion/secrets.yml
+  register: local_secrets
+ 
+- name: Load local secrets
+  include_vars:
+    file: /etc/orion/secrets.yml
+  when: local_secrets.stat.exists
+ 
+- name: Warn if no secrets file found
+  debug:
+    msg: >
+      WARNING: /etc/orion/secrets.yml not found.
+      Roles will use default passwords. Create the secrets file
+      or reflash from the golden image.
+  when: not local_secrets.stat.exists
