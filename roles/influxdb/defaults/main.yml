@@ -5,7 +5,7 @@ influxdb_org: "orion"
 influxdb_bucket: "energy_metrics"
 influxdb_retention: "90d"
 influxdb_admin_user: "orion_admin"
-influxdb_admin_password: "{{ vault_influxdb_admin_password | default('OrionInflux2026!') }}"
-influxdb_admin_token: "{{ vault_influxdb_admin_token | default('orion-influxdb-token-change-me') }}"
+influxdb_admin_password: "{{ influxdb_admin_password | default('OrionInflux2026!') }}"
+influxdb_admin_token: "{{ influxdb_admin_token | default('orion-influxdb-token-change-me') }}"
 influxdb_token_file: /home/orangepi/.influxdb_token
 app_user: orangepi
