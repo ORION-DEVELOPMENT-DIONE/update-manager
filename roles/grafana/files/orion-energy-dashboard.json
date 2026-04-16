@@ -1,0 +1,263 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "title": "Voltage",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "volt",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 200 },
+              { "color": "green", "value": 215 },
+              { "color": "orange", "value": 245 },
+              { "color": "red", "value": 255 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "influxdb", "uid": "" },
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()"
+      }]
+    },
+    {
+      "type": "stat",
+      "title": "Total Power",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 100 },
+              { "color": "yellow", "value": 3000 },
+              { "color": "red", "value": 5000 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"totalPower\")\n  |> last()"
+      }]
+    },
+    {
+      "type": "stat",
+      "title": "Energy Total",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 3,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "cyan", "value": null }] }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"energyTotal\")\n  |> last()"
+      }]
+    },
+    {
+      "type": "gauge",
+      "title": "Battery",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 20 },
+              { "color": "green", "value": 50 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"battery\")\n  |> last()"
+      }]
+    },
+    {
+      "type": "stat",
+      "title": "Meter Status",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "range", "options": { "from": 0, "to": 120, "result": { "text": "ONLINE", "color": "green" } } },
+            { "type": "range", "options": { "from": 120, "to": 999999, "result": { "text": "OFFLINE", "color": "red" } } }
+          ],
+          "unit": "s"
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: int(v: uint(v: now()) - uint(v: r._time)) / 1000000000}))"
+      }]
+    },
+    {
+      "type": "row",
+      "title": "Power Over Time",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Power (W)",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "spanNulls": true,
+            "pointSize": 4
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"totalPower\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Voltage (V)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "volt",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true },
+          "color": { "fixedColor": "orange", "mode": "fixed" }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+      }]
+    },
+    {
+      "type": "row",
+      "title": "Per-Phase Analysis",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Phase Power (W)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Phase R" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Phase Y" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Phase B" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_r\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))", "refId": "R" },
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_y\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))", "refId": "Y" },
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_b\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Phase Current (A)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "amp",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Phase R" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Phase Y" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Phase B" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_r\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))", "refId": "R" },
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_y\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))", "refId": "Y" },
+        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_b\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))", "refId": "B" }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Battery & Device Health",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Battery Level (%)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "gradientMode": "scheme" },
+          "color": { "mode": "continuous-GrYlRd" }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"battery\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Energy Accumulated (kWh)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 24 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 3,
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity" },
+          "color": { "fixedColor": "cyan", "mode": "fixed" }
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"energyTotal\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+      }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["orion", "energy", "dione"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "timezone": "browser",
+  "title": "Orion Energy Monitor",
+  "uid": "orion-energy-v1"
+}

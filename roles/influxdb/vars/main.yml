@@ -1,0 +1,14 @@
+---
+# InfluxDB configuration defaults
+influxdb_port: 8086
+influxdb_data_dir: /var/lib/influxdb2
+influxdb_org: "orion"
+influxdb_bucket: "energy_metrics"
+influxdb_retention: "90d"
+influxdb_admin_user: "orion_admin"
+influxdb_admin_password: "{{ vault_influxdb_admin_password | default('OrionInflux2026!') }}"
+influxdb_admin_token: "{{ vault_influxdb_admin_token | default('orion-influxdb-token-change-me') }}"
+influxdb_token_file: /home/orangepi/.influxdb_token
+
+# App user (must match screen-manager role)
+app_user: orangepi

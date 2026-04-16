@@ -1,0 +1,120 @@
+---
+# ============================================================================
+# Role: influxdb
+# Installs InfluxDB 2.x OSS on the Orange Pi Gateway for time-series storage
+# of energy metrics received from the Orion Meter (ESP32).
+#
+# InfluxDB 2.x is chosen over 1.x because:
+#   - Built-in web UI for data exploration
+#   - Token-based auth (no separate user/password management)
+#   - Flux query language is more powerful for time-series analytics
+#   - Native retention policies per bucket
+#   - ARM64 support for Orange Pi
+# ============================================================================
+
+- name: Check if InfluxDB is already installed
+  stat:
+    path: /usr/bin/influxd
+  register: influxdb_binary
+
+- name: Add InfluxData GPG key
+  shell: |
+    curl -s https://repos.influxdata.com/influxdata-archive.key | gpg --dearmor > /etc/apt/trusted.gpg.d/influxdata.gpg
+  args:
+    creates: /etc/apt/trusted.gpg.d/influxdata.gpg
+  when: not influxdb_binary.stat.exists
+
+- name: Add InfluxDB repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/influxdata.gpg] https://repos.influxdata.com/debian stable main"
+    state: present
+    filename: influxdata
+  when: not influxdb_binary.stat.exists
+
+- name: Install InfluxDB 2.x
+  apt:
+    name: influxdb2
+    state: present
+    update_cache: yes
+
+- name: Create InfluxDB data directory
+  file:
+    path: "{{ influxdb_data_dir }}"
+    state: directory
+    owner: influxdb
+    group: influxdb
+    mode: "0755"
+
+- name: Deploy InfluxDB configuration
+  template:
+    src: influxdb-config.toml.j2
+    dest: /etc/influxdb/config.toml
+    owner: influxdb
+    group: influxdb
+    mode: "0644"
+  register: influxdb_config
+  notify: restart influxdb
+
+- name: Start and enable InfluxDB
+  systemd:
+    name: influxdb
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for InfluxDB to be ready
+  uri:
+    url: "http://localhost:{{ influxdb_port }}/health"
+    method: GET
+    status_code: 200
+  register: influxdb_health
+  retries: 15
+  delay: 2
+  until: influxdb_health.status == 200
+
+- name: Check if InfluxDB is already set up
+  uri:
+    url: "http://localhost:{{ influxdb_port }}/api/v2/setup"
+    method: GET
+    status_code: 200
+  register: influxdb_setup_status
+
+- name: Run initial InfluxDB setup
+  uri:
+    url: "http://localhost:{{ influxdb_port }}/api/v2/setup"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ influxdb_admin_user }}"
+      password: "{{ influxdb_admin_password }}"
+      org: "{{ influxdb_org }}"
+      bucket: "{{ influxdb_bucket }}"
+      retentionPeriodSeconds: 7776000
+      token: "{{ influxdb_admin_token }}"
+    status_code: [200, 201]
+  when: influxdb_setup_status.json.allowed | default(false)
+  no_log: true
+  register: influxdb_setup_result
+
+- name: Save token for screen-manager
+  copy:
+    content: "{{ influxdb_admin_token }}"
+    dest: "{{ influxdb_token_file }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Ensure token file exists (use admin token as fallback)
+  copy:
+    content: "{{ influxdb_admin_token }}"
+    dest: "{{ influxdb_token_file }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"
+    force: no
+  no_log: true
+
+- name: Display InfluxDB status
+  debug:
+    msg: "InfluxDB running on port {{ influxdb_port }} | Org: {{ influxdb_org }} | Bucket: {{ influxdb_bucket }}"

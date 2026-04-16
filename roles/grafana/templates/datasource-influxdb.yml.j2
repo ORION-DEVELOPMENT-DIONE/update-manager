@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-Orion
+    type: influxdb
+    access: proxy
+    url: http://localhost:{{ influxdb_port }}
+    isDefault: true
+    editable: true
+    jsonData:
+      version: Flux
+      organization: {{ influxdb_org }}
+      defaultBucket: {{ influxdb_bucket }}
+      tlsSkipVerify: true
+    secureJsonData:
+      token: {{ influxdb_admin_token }}

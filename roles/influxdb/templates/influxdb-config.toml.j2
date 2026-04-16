@@ -1,0 +1,11 @@
+reporting-disabled = true
+
+bolt-path = "{{ influxdb_data_dir }}/influxd.bolt"
+engine-path = "{{ influxdb_data_dir }}/engine"
+http-bind-address = ":{{ influxdb_port }}"
+
+storage-cache-max-memory-size = 67108864
+storage-cache-snapshot-memory-size = 26214400
+storage-compact-full-write-cold-duration = "4h"
+
+log-level = "warn"

@@ -1,0 +1,131 @@
+---
+# ============================================================================
+# Role: grafana
+# Installs Grafana OSS on the Orange Pi Gateway for energy monitoring dashboards.
+# Accessible via Tailscale at http://orion-<hostname>:3000
+#
+# Includes:
+#   - Auto-provisioned InfluxDB datasource (points to local InfluxDB)
+#   - Pre-built Orion Energy Dashboard
+#   - Anonymous read-only access for quick viewing (configurable)
+# ============================================================================
+
+- name: Install required dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+    state: present
+
+- name: Check if Grafana is already installed
+  stat:
+    path: /usr/sbin/grafana-server
+  register: grafana_binary
+
+- name: Add Grafana GPG key
+  shell: |
+    curl -s https://apt.grafana.com/gpg.key | gpg --dearmor > /etc/apt/trusted.gpg.d/grafana.gpg
+  args:
+    creates: /etc/apt/trusted.gpg.d/grafana.gpg
+  when: not grafana_binary.stat.exists
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/grafana.gpg] https://apt.grafana.com stable main"
+    state: present
+    filename: grafana
+  when: not grafana_binary.stat.exists
+
+- name: Install Grafana OSS
+  apt:
+    name: grafana
+    state: present
+    update_cache: yes
+
+- name: Create provisioning directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: "0755"
+  loop:
+    - /etc/grafana/provisioning/datasources
+    - /etc/grafana/provisioning/dashboards
+    - /var/lib/grafana/dashboards
+
+- name: Deploy InfluxDB datasource provisioning
+  template:
+    src: datasource-influxdb.yml.j2
+    dest: /etc/grafana/provisioning/datasources/influxdb.yml
+    owner: grafana
+    group: grafana
+    mode: "0640"
+  notify: restart grafana
+
+- name: Deploy dashboard provisioning config
+  copy:
+    content: |
+      apiVersion: 1
+      providers:
+        - name: 'Orion Dashboards'
+          orgId: 1
+          folder: 'Orion'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards
+            foldersFromFilesStructure: false
+    dest: /etc/grafana/provisioning/dashboards/orion.yml
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy Orion Energy Dashboard
+  copy:
+    src: orion-energy-dashboard.json
+    dest: /var/lib/grafana/dashboards/orion-energy-dashboard.json
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Configure Grafana for low-resource environment
+  lineinfile:
+    path: /etc/grafana/grafana.ini
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    insertafter: "{{ item.after | default(omit) }}"
+  loop:
+    - { regexp: '^;?http_port', line: 'http_port = {{ grafana_port }}', after: '\\[server\\]' }
+    - { regexp: '^;?admin_user', line: 'admin_user = {{ grafana_admin_user }}', after: '\\[security\\]' }
+    - { regexp: '^;?admin_password', line: 'admin_password = {{ grafana_admin_password }}', after: '\\[security\\]' }
+    - { regexp: '^;?enabled = false', line: 'enabled = true', after: '\\[auth.anonymous\\]' }
+    - { regexp: '^;?org_role = Viewer', line: 'org_role = Viewer', after: '\\[auth.anonymous\\]' }
+  notify: restart grafana
+
+- name: Start and enable Grafana
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for Grafana to be ready
+  uri:
+    url: "http://localhost:{{ grafana_port }}/api/health"
+    method: GET
+    status_code: 200
+  register: grafana_health
+  retries: 15
+  delay: 2
+  until: grafana_health.status == 200
+
+- name: Display Grafana access info
+  debug:
+    msg: >
+      Grafana running on port {{ grafana_port }}.
+      Access via Tailscale: http://orion-{{ ansible_hostname }}:{{ grafana_port }}
+      Default login: {{ grafana_admin_user }} / {{ grafana_admin_password }}
