@@ -3,22 +3,11 @@
   hosts: localhost
   connection: local
   become: yes
-  
+
   vars:
     device_hostname: "{{ ansible_hostname }}"
-    #tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTH_KEY') }}"  # Set via env or hardcode
-    
-  pre_tasks:
-    - name: Remove incompatible Jinja2 plugins
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /usr/lib/python3/dist-packages/ansible/plugins/filter/core.py
-        - /usr/lib/python3/dist-packages/ansible/plugins/filter/mathstuff.py
-      ignore_errors: yes
-      tags: always
 
+  pre_tasks:
     - name: Fix Jinja2 compatibility issue
       pip:
         name: jinja2
@@ -33,7 +22,7 @@
         update_cache: yes
         cache_valid_time: 3600
       tags: always
-      
+
     - name: Install required packages
       apt:
         name:
@@ -45,27 +34,17 @@
         state: present
       tags: always
 
-    - name: Check if vault file exists
-      stat:
-        path: "{{ playbook_dir }}/group_vars/all/vault.yml"
-      register: vault_file
-      tags: always
-
-    - name: Load vault variables if vault file exists
-      include_vars:
-        file: "{{ playbook_dir }}/group_vars/all/vault.yml"
-      when: vault_file.stat.exists
-      tags: always
-      ignore_errors: yes
-
   roles:
+    - role: local-secrets
+      tags: always
+
     - role: network-config
       tags: network
-      
+
     - role: tailscale-auth
       tags: tailscale
       when: tailscale_oauth_client_id is defined
-      
+
     - role: tailscale
       tags: tailscale
       when: tailscale_oauth_client_id is defined
@@ -75,10 +54,10 @@
 
     - role: grafana
       tags: grafana
-      
+
     - role: screen-manager
       tags: screen-manager
-      
+
     - role: auto-update
       tags: auto-update
 
