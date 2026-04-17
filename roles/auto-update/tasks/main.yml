@@ -8,9 +8,10 @@
     minute: 0
 
 - name: Create ansible-pull log file
-  file:
-    path: /var/log/ansible-pull.log
-    state: touch
+  copy:
+    content: ""
+    dest: /var/log/ansible-pull.log
     owner: root
     group: root
     mode: '0644'
+    force: no
