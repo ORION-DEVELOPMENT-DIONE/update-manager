@@ -35,27 +35,13 @@
     mode: '0755'
 
 - name: Create logs .gitkeep file
-  file:
-    path: "{{ app_dir }}/logs/.gitkeep"
-    state: touch
+  copy:
+    content: ""
+    dest: "{{ app_dir }}/logs/.gitkeep"
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
     mode: '0644'
-
-#- name: Update .version file to current git commit
-#  shell: git rev-parse --short HEAD > {{ app_dir }}/.version
-#  args:
-#    chdir: "{{ app_dir }}"
-#  become_user: "{{ app_user }}"
-
-- name: Display current version
-  shell: cat {{ app_dir }}/.version
-  register: version_output
-  changed_when: false
-
-- name: Show installed version
-  debug:
-    msg: "Screen Manager version: {{ version_output.stdout }}"
+    force: no
 
 - name: Check if requirements.txt exists
   stat:
