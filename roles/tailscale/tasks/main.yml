@@ -38,11 +38,11 @@
 - name: Connect to Tailscale network using auth key from file
   shell: |
     AUTH_KEY=$(cat /etc/tailscale/auth_key | tr -d '\n')
-    tailscale up --reset --auth-key="$AUTH_KEY" --hostname={{ tailscale_hostname }} --accept-routes
-  when: 
-    - tailscale_status.rc != 0 or 'BackendState":"Running"' not in tailscale_status.stdout
+    tailscale up --auth-key="$AUTH_KEY" --hostname={{ tailscale_hostname }} --accept-routes
+  when:
+    - tailscale_status.rc != 0 or 'BackendState' not in tailscale_status.stdout or '"Running"' not in tailscale_status.stdout
   register: tailscale_join
-  failed_when: 
+  failed_when:
     - tailscale_join.rc != 0
     - '"is already in use" not in tailscale_join.stderr'
   no_log: true
