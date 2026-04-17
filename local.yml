@@ -8,14 +8,41 @@
     device_hostname: "{{ ansible_hostname }}"
 
   pre_tasks:
+    - name: Check Jinja2 version
+      shell: python3 -c "import jinja2; print(jinja2.__version__)"
+      register: jinja2_version
+      changed_when: false
+      failed_when: false
+      tags: always
+
     - name: Fix Jinja2 compatibility issue
       pip:
         name: jinja2
         version: "3.1.5"
         executable: pip3
         extra_args: --force-reinstall
+      when: jinja2_version.stdout | default('') != '3.1.5'
       ignore_errors: yes
       tags: always
+      
+    # - name: Remove incompatible Jinja2 plugins
+    #   file:
+    #     path: "{{ item }}"
+    #     state: absent
+    #   loop:
+    #     - /usr/lib/python3/dist-packages/ansible/plugins/filter/core.py
+    #     - /usr/lib/python3/dist-packages/ansible/plugins/filter/mathstuff.py
+    #   ignore_errors: yes
+    #   tags: always
+
+    # - name: Fix Jinja2 compatibility issue
+    #   pip:
+    #     name: jinja2
+    #     version: "3.1.5"
+    #     executable: pip3
+    #     extra_args: --force-reinstall
+    #   ignore_errors: yes
+    #   tags: always
 
     - name: Update apt cache
       apt:
