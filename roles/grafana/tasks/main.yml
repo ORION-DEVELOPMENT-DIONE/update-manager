@@ -102,8 +102,16 @@
     - { regexp: '^;?http_port', line: 'http_port = {{ grafana_port }}', after: '\\[server\\]' }
     - { regexp: '^;?admin_user', line: 'admin_user = {{ grafana_admin_user }}', after: '\\[security\\]' }
     - { regexp: '^;?admin_password', line: 'admin_password = {{ grafana_admin_password }}', after: '\\[security\\]' }
-    - { regexp: '^;?enabled = false', line: 'enabled = true', after: '\\[auth.anonymous\\]' }
-    - { regexp: '^;?org_role = Viewer', line: 'org_role = Viewer', after: '\\[auth.anonymous\\]' }
+    - { regexp: '^;?org_role', line: 'org_role = Viewer', after: '\\[auth.anonymous\\]' }
+  notify: restart grafana
+
+- name: Enable Grafana anonymous access
+  lineinfile:
+    path: /etc/grafana/grafana.ini
+    regexp: '^;?enabled'
+    line: 'enabled = true'
+    insertafter: '^\[auth\.anonymous\]'
+    firstmatch: yes
   notify: restart grafana
 
 - name: Start and enable Grafana
