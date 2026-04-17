@@ -33,7 +33,7 @@
       },
       "targets": [{
         "datasource": { "type": "influxdb", "uid": "" },
-        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()"
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()"
       }]
     },
     {
@@ -55,7 +55,7 @@
         }
       },
       "targets": [{
-        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"totalPower\")\n  |> last()"
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"totalPower\")\n  |> last()"
       }]
     },
     {
@@ -71,7 +71,7 @@
         }
       },
       "targets": [{
-        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"energyTotal\")\n  |> last()"
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"energyTotal\")\n  |> last()"
       }]
     },
     {
@@ -94,7 +94,7 @@
         }
       },
       "targets": [{
-        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"battery\")\n  |> last()"
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"battery\")\n  |> last()"
       }]
     },
     {
@@ -111,7 +111,7 @@
         }
       },
       "targets": [{
-        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: int(v: uint(v: now()) - uint(v: r._time)) / 1000000000}))"
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"voltage\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: int(v: uint(v: now()) - uint(v: r._time)) / 1000000000}))"
       }]
     },
     {
