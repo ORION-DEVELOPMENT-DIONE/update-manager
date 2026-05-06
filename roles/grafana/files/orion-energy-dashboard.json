@@ -115,6 +115,23 @@
       }]
     },
     {
+      "type": "stat",
+      "title": "Phase Mode",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "Single Phase", "color": "blue" } } },
+            { "type": "value", "options": { "2": { "text": "2-Phase", "color": "yellow" } } },
+            { "type": "value", "options": { "3": { "text": "3-Phase", "color": "green" } } }
+          ]
+        }
+      },
+      "targets": [{
+        "query": "from(bucket: \"energy_metrics\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"phaseCount\")\n  |> last()"
+      }]
+    },
+    {
       "type": "row",
       "title": "Power Over Time",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
@@ -173,7 +190,8 @@
       "fieldConfig": {
         "defaults": {
           "unit": "watt",
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true },
+          "noValue": "N/A"
         },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Phase R" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
@@ -182,9 +200,18 @@
         ]
       },
       "targets": [
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_r\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))", "refId": "R" },
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_y\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))", "refId": "Y" },
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_b\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))", "refId": "B" }
+        {
+          "refId": "R",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_r\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))"
+        },
+        {
+          "refId": "Y",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_y\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))"
+        },
+        {
+          "refId": "B",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"power_b\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))"
+        }
       ]
     },
     {
@@ -194,7 +221,8 @@
       "fieldConfig": {
         "defaults": {
           "unit": "amp",
-          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true },
+          "noValue": "N/A"
         },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Phase R" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
@@ -203,9 +231,18 @@
         ]
       },
       "targets": [
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_r\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))", "refId": "R" },
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_y\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))", "refId": "Y" },
-        { "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_b\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))", "refId": "B" }
+        {
+          "refId": "R",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_r\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase R\"}))"
+        },
+        {
+          "refId": "Y",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_y\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase Y\"}))"
+        },
+        {
+          "refId": "B",
+          "query": "from(bucket: \"energy_metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"energy\" and r._field == \"current_b\")\n  |> filter(fn: (r) => exists r._value)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: \"Phase B\"}))"
+        }
       ]
     },
     {
