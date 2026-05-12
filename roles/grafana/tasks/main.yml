@@ -105,13 +105,35 @@
     - { regexp: '^;?org_role', line: 'org_role = Viewer', after: '\\[auth.anonymous\\]' }
   notify: restart grafana
 
-- name: Enable Grafana anonymous access
+# - name: Enable Grafana anonymous access
+#   lineinfile:
+#     path: /etc/grafana/grafana.ini
+#     regexp: '^;?enabled'
+#     line: 'enabled = true'
+#     insertafter: '^\[auth\.anonymous\]'
+#     firstmatch: yes
+#   notify: restart grafana
+
+- name: Disable Grafana anonymous access
   lineinfile:
     path: /etc/grafana/grafana.ini
     regexp: '^;?enabled'
-    line: 'enabled = true'
+    line: 'enabled = false'
     insertafter: '^\[auth\.anonymous\]'
     firstmatch: yes
+  notify: restart grafana
+
+- name: Get Tailscale IP
+  shell: tailscale ip -4 2>/dev/null || echo "127.0.0.1"
+  register: tailscale_ip
+  changed_when: false
+
+- name: Bind Grafana to Tailscale interface only
+  lineinfile:
+    path: /etc/grafana/grafana.ini
+    regexp: '^;?http_addr'
+    line: 'http_addr = {{ tailscale_ip.stdout }}'
+    insertafter: '\\[server\\]'
   notify: restart grafana
 
 - name: Start and enable Grafana
@@ -131,9 +153,15 @@
   delay: 2
   until: grafana_health.status == 200
 
+# - name: Display Grafana access info
+#   debug:
+#     msg: >
+#       Grafana running on port {{ grafana_port }}.
+#       Access via Tailscale: http://orion-{{ ansible_hostname }}:{{ grafana_port }}
+#       Default login: {{ grafana_admin_user }} / {{ grafana_admin_password }}
+
 - name: Display Grafana access info
   debug:
     msg: >
-      Grafana running on port {{ grafana_port }}.
-      Access via Tailscale: http://orion-{{ ansible_hostname }}:{{ grafana_port }}
-      Default login: {{ grafana_admin_user }} / {{ grafana_admin_password }}
+      Grafana on port {{ grafana_port }} (localhost only).
+      Tunnel: ssh -L {{ grafana_port }}:127.0.0.1:{{ grafana_port }} orangepi@orion-{{ ansible_hostname }}

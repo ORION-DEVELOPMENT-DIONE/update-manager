@@ -65,6 +65,15 @@
     - role: local-secrets
       tags: always
 
+    - role: security-hardening
+      tags: security
+
+    - role: journald
+      tags: journald
+
+    - role: logrotate
+      tags: logrotate
+
     - role: network-config
       tags: network
 

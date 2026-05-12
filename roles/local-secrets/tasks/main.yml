@@ -3,16 +3,28 @@
   stat:
     path: /etc/orion/secrets.yml
   register: local_secrets
- 
+
 - name: Load local secrets
   include_vars:
     file: /etc/orion/secrets.yml
   when: local_secrets.stat.exists
- 
-- name: Warn if no secrets file found
-  debug:
-    msg: >
-      WARNING: /etc/orion/secrets.yml not found.
-      Roles will use default passwords. Create the secrets file
-      or reflash from the golden image.
+
+- name: FAIL if secrets file missing
+  fail:
+    msg: |
+      FATAL: /etc/orion/secrets.yml not found.
+      This device has no credentials. Deploy secrets first:
+        ansible-playbook deploy-secrets.yml -i localhost, --ask-vault-pass
+      Or copy secrets.yml from a provisioned device.
   when: not local_secrets.stat.exists
+
+- name: Validate required secrets are present
+  assert:
+    that:
+      - influxdb_admin_password is defined
+      - influxdb_admin_password | length > 0
+      - influxdb_admin_token is defined
+      - influxdb_admin_token | length > 0
+      - grafana_admin_password is defined
+      - grafana_admin_password | length > 0
+    fail_msg: "/etc/orion/secrets.yml is incomplete. Missing required credentials."

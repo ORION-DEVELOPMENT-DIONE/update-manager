@@ -1,0 +1,14 @@
+[Unit]
+Description=Bind mount persistent journal from /var/log.hdd
+DefaultDependencies=no
+Before=systemd-journald.service
+After=local-fs.target
+
+[Mount]
+What=/var/log.hdd/journal
+Where=/var/log/journal
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target

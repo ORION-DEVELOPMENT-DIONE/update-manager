@@ -1,0 +1,13 @@
+---
+- name: Ensure logrotate installed
+  apt:
+    name: logrotate
+    state: present
+
+- name: Deploy log rotation config
+  copy:
+    src: orion-logrotate.conf
+    dest: /etc/logrotate.d/orion
+    owner: root
+    group: root
+    mode: '0644'

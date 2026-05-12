@@ -1,0 +1,45 @@
+---
+
+- name: Check if /var/log is on zram
+  shell: findmnt -n -o FSTYPE /var/log
+  register: varlog_fstype
+  changed_when: false
+  failed_when: false
+
+- name: Create persistent journal directory
+  file:
+    path: /var/log.hdd/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: '2755'
+  when: varlog_fstype.stdout | trim == 'ext4' or varlog_fstype.stdout | trim == 'ext2'
+
+- name: Deploy journald config
+  copy:
+    src: journald.conf
+    dest: /etc/systemd/journald.conf
+    owner: root
+    mode: '0644'
+  notify: Restart journald
+
+- name: Deploy journal bind mount service
+  copy:
+    src: var-log-journal.mount
+    dest: /etc/systemd/system/var-log-journal.mount
+    owner: root
+    mode: '0644'
+  register: mount_unit
+  when: varlog_fstype.stdout | trim == 'ext4'
+
+- name: Reload systemd for mount unit
+  systemd:
+    daemon_reload: yes
+  when: mount_unit is changed
+
+- name: Enable and start journal bind mount
+  systemd:
+    name: var-log-journal.mount
+    enabled: yes
+    state: started
+  when: varlog_fstype.stdout | trim == 'ext4'

@@ -1,0 +1,9 @@
+---
+
+- name: Bind InfluxDB to localhost
+  lineinfile:
+    path: /etc/influxdb/config.toml
+    regexp: '^http-bind-address'
+    line: 'http-bind-address = "127.0.0.1:8086"'
+  notify: restart influxdb
+  ignore_errors: yes

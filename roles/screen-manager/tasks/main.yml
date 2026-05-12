@@ -4,6 +4,9 @@
     name:
       - git
       - python3-pip
+      - python3-dev
+      - pkg-config
+      - libsystemd-dev
     state: present
     update_cache: yes
 

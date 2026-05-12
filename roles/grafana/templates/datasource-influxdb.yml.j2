@@ -11,6 +11,6 @@ datasources:
       version: Flux
       organization: {{ influxdb_org }}
       defaultBucket: {{ influxdb_bucket }}
-      tlsSkipVerify: true
+      tlsSkipVerify: false
     secureJsonData:
       token: {{ influxdb_admin_token }}
