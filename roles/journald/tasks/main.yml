@@ -1,19 +1,76 @@
 ---
+# ── Phase 1: Neutralize Armbian ramlog (before touching journals) ──
 
-- name: Check if /var/log is on zram
+- name: Stop orangepi-ramlog service
+  systemd:
+    name: orangepi-ramlog.service
+    state: stopped
+  register: ramlog_stopped
+  ignore_errors: yes
+
+- name: Disable orangepi-ramlog service
+  systemd:
+    name: orangepi-ramlog.service
+    enabled: no
+  ignore_errors: yes
+
+- name: Disable ramlog in config
+  copy:
+    dest: /etc/default/orangepi-ramlog
+    content: |
+      # Disabled by Orion journald role — logs are persistent on disk
+      ENABLED=false
+      SIZE=0M
+    owner: root
+    mode: '0644'
+
+- name: Remove orangepi truncate-logs cron
+  file:
+    path: /etc/cron.d/orangepi-truncate-logs
+    state: absent
+
+- name: Remove orangepi-ram-logging daily cron
+  file:
+    path: /etc/cron.daily/orangepi-ram-logging
+    state: absent
+
+- name: Neutralize truncate-logs script
+  copy:
+    dest: /usr/lib/orangepi/orangepi-truncate-logs
+    content: |
+      #!/bin/bash
+      # Disabled by Orion journald role
+      exit 0
+    owner: root
+    mode: '0755'
+    backup: yes
+
+# ── Phase 2: Ensure persistent journal directory survives ramlog stop ──
+
+- name: Check /var/log filesystem type
   shell: findmnt -n -o FSTYPE /var/log
   register: varlog_fstype
   changed_when: false
   failed_when: false
 
-- name: Create persistent journal directory
+- name: Create /var/log.hdd/journal (disk-backed)
   file:
     path: /var/log.hdd/journal
     state: directory
     owner: root
     group: systemd-journal
     mode: '2755'
-  when: varlog_fstype.stdout | trim == 'ext4' or varlog_fstype.stdout | trim == 'ext2'
+  when: varlog_fstype.stdout | trim in ['ext4', 'ext2', 'f2fs']
+
+- name: Ensure /var/log/journal exists (always)
+  file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: '2755'
+
+# ── Phase 3: Deploy journald config ──
 
 - name: Deploy journald config
   copy:
@@ -23,6 +80,8 @@
     mode: '0644'
   notify: Restart journald
 
+# ── Phase 4: Bind mount (ext4 devices) ──
+
 - name: Deploy journal bind mount service
   copy:
     src: var-log-journal.mount
@@ -30,7 +89,7 @@
     owner: root
     mode: '0644'
   register: mount_unit
-  when: varlog_fstype.stdout | trim == 'ext4'
+  when: varlog_fstype.stdout | trim in ['ext4', 'ext2', 'f2fs']
 
 - name: Reload systemd for mount unit
   systemd:
@@ -42,4 +101,21 @@
     name: var-log-journal.mount
     enabled: yes
     state: started
-  when: varlog_fstype.stdout | trim == 'ext4'
+  when: varlog_fstype.stdout | trim in ['ext4', 'ext2', 'f2fs']
+
+# ── Phase 5: Verify journald is writing persistently ──
+
+- name: Restart journald to pick up changes
+  systemd:
+    name: systemd-journald
+    state: restarted
+  when: ramlog_stopped is changed
+
+- name: Verify journal persistence
+  shell: journalctl --disk-usage
+  register: journal_check
+  changed_when: false
+
+- name: Log journal status
+  debug:
+    msg: "Journal status: {{ journal_check.stdout }}"
