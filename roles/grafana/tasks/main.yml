@@ -145,7 +145,7 @@
 
 - name: Wait for Grafana to be ready
   uri:
-    url: "http://localhost:{{ grafana_port }}/api/health"
+    url: "http://{{ tailscale_ip.stdout }}:{{ grafana_port }}/api/health"
     method: GET
     status_code: 200
   register: grafana_health
