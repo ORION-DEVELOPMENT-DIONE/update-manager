@@ -1,12 +1,4 @@
 ---
-- name: Ensure ansible-pull cronjob is installed
-  cron:
-    name: "Orion auto-update"
-    user: root
-    job: "ansible-pull -U https://github.com/ORION-DEVELOPMENT-DIONE/update-manager.git -C main local.yml -i localhost, -o >> /var/log/ansible-pull.log 2>&1"
-    hour: 0
-    minute: 0
-
 - name: Create ansible-pull log file
   copy:
     content: ""
@@ -15,3 +7,18 @@
     group: root
     mode: '0644'
     force: no
+
+- name: Deploy update wrapper script
+  copy:
+    src: orion-update.sh
+    dest: /usr/local/bin/orion-update.sh
+    owner: root
+    mode: '0755'
+
+- name: Ensure ansible-pull cronjob is installed
+  cron:
+    name: "Orion auto-update"
+    user: root
+    job: "/usr/local/bin/orion-update.sh"
+    hour: 1
+    minute: 0
