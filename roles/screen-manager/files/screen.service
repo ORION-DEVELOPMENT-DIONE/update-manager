@@ -3,6 +3,7 @@ Description=Orion Screen Service
 After=network.target
 
 [Service]
+SyslogIdentifier=screen-manager
 Type=simple
 User=root
 Group=root
