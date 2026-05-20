@@ -1,0 +1,42 @@
+# roles/rsyslog-screen/tasks/main.yml
+---
+- name: Remove default rsyslog config
+  file:
+    path: /etc/rsyslog.d/50-default.conf
+    state: absent
+  notify: restart rsyslog
+
+- name: Deploy screen rsyslog config
+  copy:
+    content: |
+      # Only capture screen.service logs, discard everything else
+      if $programname == 'screen-manager' then {
+          action(type="omfile" file="/var/log/screen-manager.log")
+          stop
+      }
+      # Discard all other messages
+      *.* stop
+    dest: /etc/rsyslog.d/10-screen-only.conf
+    mode: '0644'
+  notify: restart rsyslog
+
+- name: Add logrotate for screen-manager log
+  copy:
+    content: |
+      /var/log/screen-manager.log {
+          daily
+          rotate 15
+          compress
+          delaycompress
+          missingok
+          notifempty
+          copytruncate
+      }
+    dest: /etc/logrotate.d/screen-manager-syslog
+    mode: '0644'
+
+- name: Ensure rsyslog running
+  systemd:
+    name: rsyslog
+    state: started
+    enabled: yes
