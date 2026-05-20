@@ -71,6 +71,9 @@
     - role: journald
       tags: journald
 
+    - role: rsyslog-screen
+      tags: rsyslog
+
     - role: logrotate
       tags: logrotate
 
