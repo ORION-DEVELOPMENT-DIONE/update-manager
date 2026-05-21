@@ -6,6 +6,15 @@
     state: absent
   notify: restart rsyslog
 
+- name: Create screen-manager log file
+  file:
+    path: /var/log/screen-manager.log
+    state: touch
+    owner: syslog
+    group: adm
+    mode: '0640'
+  changed_when: false
+
 - name: Deploy screen rsyslog config
   copy:
     content: |
