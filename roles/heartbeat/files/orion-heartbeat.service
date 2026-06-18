@@ -1,0 +1,19 @@
+[Unit]
+Description=Orion Fleet Heartbeat
+After=network-online.target influxdb.service
+Wants=network-online.target
+Requires=influxdb.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/orion/heartbeat.env
+ExecStart=/usr/bin/python3 /usr/local/bin/orion-heartbeat.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=orion-heartbeat
+User=root
+
+[Install]
+WantedBy=multi-user.target

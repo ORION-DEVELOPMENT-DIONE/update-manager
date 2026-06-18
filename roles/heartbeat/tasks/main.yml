@@ -1,0 +1,40 @@
+---
+- name: Ensure orion config dir exists
+  file:
+    path: /etc/orion
+    state: directory
+    owner: root
+    mode: '0755'
+
+- name: Deploy heartbeat script
+  copy:
+    src: orion-heartbeat.py
+    dest: /usr/local/bin/orion-heartbeat.py
+    owner: root
+    mode: '0755'
+  notify: restart heartbeat
+
+- name: Deploy heartbeat env file
+  template:
+    src: heartbeat.env.j2
+    dest: /etc/orion/heartbeat.env
+    owner: root
+    mode: '0644'
+  notify: restart heartbeat
+
+- name: Deploy heartbeat systemd unit
+  copy:
+    src: orion-heartbeat.service
+    dest: /etc/systemd/system/orion-heartbeat.service
+    owner: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart heartbeat
+
+- name: Enable and start heartbeat
+  systemd:
+    name: orion-heartbeat.service
+    enabled: yes
+    state: started
+    daemon_reload: yes
