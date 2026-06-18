@@ -63,6 +63,15 @@
     mode: "0640"
   notify: restart grafana
 
+- name: Deploy Fleet datasource
+  template:
+    src: datasource-fleet.yml.j2
+    dest: /etc/grafana/provisioning/datasources/fleet.yml
+    owner: grafana
+    group: grafana
+    mode: '0640'
+  notify: restart grafana
+
 - name: Deploy dashboard provisioning config
   copy:
     content: |
@@ -92,6 +101,15 @@
     mode: "0644"
   notify: restart grafana
 
+- name: Deploy fleet health dashboard
+  copy:
+    src: fleet-health.json
+    dest: /var/lib/grafana/dashboards/fleet-health.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+  
 - name: Configure Grafana for low-resource environment
   lineinfile:
     path: /etc/grafana/grafana.ini

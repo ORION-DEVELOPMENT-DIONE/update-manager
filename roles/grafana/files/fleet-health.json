@@ -1,0 +1,167 @@
+{
+  "title": "Orion Fleet Health",
+  "uid": "orion-fleet",
+  "tags": ["orion", "fleet"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Active Devices",
+      "gridPos": {"x":0,"y":0,"w":6,"h":4},
+      "options": {"colorMode":"background","graphMode":"none","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false}},
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"thresholds":{"steps":[{"color":"red","value":null},{"color":"green","value":1}]}}},
+      "targets":[{"refId":"A","query":"from(bucket:\"fleet\")\n  |> range(start:-5m)\n  |> filter(fn:(r)=>r._measurement==\"orion_health\" and r._field==\"uptime_s\")\n  |> group()\n  |> distinct(column:\"host\")\n  |> count()"}]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Offline (>5min)",
+      "gridPos": {"x":6,"y":0,"w":6,"h":4},
+      "options": {"colorMode":"background","graphMode":"none","reduceOptions":{"calcs":["lastNotNull"]}},
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}},
+      "targets":[{"refId":"A","query":"hosts_all = from(bucket:\"fleet\") |> range(start:-1h) |> filter(fn:(r)=>r._field==\"uptime_s\") |> group() |> distinct(column:\"host\") |> count()\nhosts_recent = from(bucket:\"fleet\") |> range(start:-5m) |> filter(fn:(r)=>r._field==\"uptime_s\") |> group() |> distinct(column:\"host\") |> count()\nunion(tables:[hosts_all, hosts_recent]) |> difference()"}]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Device Status",
+      "gridPos": {"x":0,"y":4,"w":24,"h":8},
+      "options": {"showHeader": true, "cellHeight": "sm"},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Screen"},
+            "properties": [
+              {"id": "mappings", "value": [
+                {"type": "value", "options": {
+                  "1": {"text": "✓ OK",   "color": "green", "index": 0},
+                  "0": {"text": "✗ DOWN", "color": "red",   "index": 1}
+                }}
+              ]},
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "custom.width", "value": 90}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Tailscale"},
+            "properties": [
+              {"id": "mappings", "value": [
+                {"type": "value", "options": {
+                  "1": {"text": "✓ OK",   "color": "green", "index": 0},
+                  "0": {"text": "✗ DOWN", "color": "red",   "index": 1}
+                }}
+              ]},
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "custom.width", "value": 90}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Update"},
+            "properties": [
+              {"id": "mappings", "value": [
+                {"type": "value", "options": {
+                  "ok":   {"text": "✓ OK",   "color": "green", "index": 0},
+                  "fail": {"text": "✗ FAIL", "color": "red",   "index": 1},
+                  "none": {"text": "—",      "color": "text",  "index": 2}
+                }}
+              ]},
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "custom.width", "value": 90}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Fails 24h"},
+            "properties": [
+              {"id": "mappings", "value": [
+                {"type": "value", "options": {
+                  "0": {"text": "0", "color": "green", "index": 0}
+                }},
+                {"type": "range", "options": {
+                  "from": 1, "to": 999, "result": {"color": "red", "index": 1}
+                }}
+              ]},
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "custom.width", "value": 80}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Device"},
+            "properties": [{"id": "custom.width", "value": 120}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Version"},
+            "properties": [{"id": "custom.width", "value": 100}]
+          }
+        ]
+      },
+      "transformations": [
+        {"id": "organize", "options": {
+          "excludeByName": {
+            "_start": true, "_stop": true, "_measurement": true,
+            "tailscale_ip": true, "result": true, "table": true, "_time": true
+          },
+          "indexByName": {
+            "host": 0,
+            "screen_active": 1,
+            "tailscale_active": 2,
+            "last_update": 3,
+            "git_hash": 4,
+            "uptime_s": 5,
+            "cpu_temp_c": 6,
+            "load_1m": 7,
+            "mem_free_mb": 8,
+            "disk_free_mb": 9,
+            "esp32_last_seen_s": 10,
+            "update_failures_24h": 11
+          },
+          "renameByName": {
+            "host":                "Device",
+            "screen_active":       "Screen",
+            "tailscale_active":    "Tailscale",
+            "last_update":         "Update",
+            "git_hash":            "Version",
+            "uptime_s":            "Uptime",
+            "cpu_temp_c":          "CPU °C",
+            "load_1m":             "Load 1m",
+            "mem_free_mb":         "Mem Free MB",
+            "disk_free_mb":        "Disk Free MB",
+            "esp32_last_seen_s":   "ESP32 Age",
+            "update_failures_24h": "Fails 24h"
+          }
+        }}
+      ],
+      "targets": [{
+        "refId": "A",
+        "query": "from(bucket:\"fleet\")\n  |> range(start:-5m)\n  |> filter(fn:(r) => r._measurement == \"orion_health\")\n  |> last()\n  |> map(fn: (r) => ({\n      r with _value:\n        if r._field == \"uptime_s\" then\n          string(v: int(v: r._value) / 86400) + \"d \" +\n          string(v: (int(v: r._value) % 86400) / 3600) + \"h\"\n        else if r._field == \"esp32_last_seen_s\" then\n          (if int(v: r._value) < 0 then\n             \"no data\"\n           else if int(v: r._value) < 60 then\n             string(v: int(v: r._value)) + \"s\"\n           else if int(v: r._value) < 3600 then\n             string(v: int(v: r._value) / 60) + \"m\"\n           else\n             string(v: int(v: r._value) / 3600) + \"h \" +\n             string(v: (int(v: r._value) % 3600) / 60) + \"m\")\n        else if r._field == \"cpu_temp_c\" or r._field == \"load_1m\" then\n          string(v: float(v: r._value))\n        else\n          string(v: r._value)\n  }))\n  |> group()\n  |> pivot(rowKey:[\"host\"], columnKey:[\"_field\"], valueColumn:\"_value\")"
+      }]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "CPU Temperature",
+      "gridPos": {"x":0,"y":12,"w":12,"h":6},
+      "fieldConfig":{"defaults":{"unit":"celsius","color":{"mode":"palette-classic"}}},
+      "targets":[{"refId":"A","query":"from(bucket:\"fleet\")\n  |> range(start:v.timeRangeStart, stop:v.timeRangeStop)\n  |> filter(fn:(r)=>r._field==\"cpu_temp_c\")\n  |> aggregateWindow(every:1m, fn:mean)\n  |> keep(columns:[\"_time\",\"_value\",\"host\"])"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Memory Free (MB)",
+      "gridPos": {"x":12,"y":12,"w":12,"h":6},
+      "fieldConfig":{"defaults":{"unit":"decmbytes"}},
+      "targets":[{"refId":"A","query":"from(bucket:\"fleet\")\n  |> range(start:v.timeRangeStart, stop:v.timeRangeStop)\n  |> filter(fn:(r)=>r._field==\"mem_free_mb\")\n  |> aggregateWindow(every:1m, fn:mean)\n  |> keep(columns:[\"_time\",\"_value\",\"host\"])"}]
+    },
+    {
+      "id": 6, "type": "stat", "title": "ESP32 Last Seen",
+      "gridPos": {"x":0,"y":18,"w":12,"h":4},
+      "options":{"reduceOptions":{"calcs":["lastNotNull"]}},
+      "fieldConfig":{"defaults":{"unit":"s","color":{"mode":"thresholds"},"thresholds":{"steps":[{"color":"green","value":null},{"color":"yellow","value":900},{"color":"red","value":1800}]}}},
+      "targets":[{"refId":"A","query":"from(bucket:\"fleet\")\n  |> range(start:-1h)\n  |> filter(fn:(r)=>r._field==\"esp32_last_seen_s\")\n  |> last()\n  |> keep(columns:[\"_value\",\"host\"])"}]
+    },
+    {
+      "id": 7, "type": "stat", "title": "Auto-Update Failures (24h)",
+      "gridPos": {"x":12,"y":18,"w":12,"h":4},
+      "options":{"reduceOptions":{"calcs":["lastNotNull"]}},
+      "fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"thresholds":{"steps":[{"color":"green","value":null},{"color":"red","value":1}]}}},
+      "targets":[{"refId":"A","query":"from(bucket:\"fleet\")\n  |> range(start:-1h)\n  |> filter(fn:(r)=>r._field==\"update_failures_24h\")\n  |> last()\n  |> keep(columns:[\"_value\",\"host\"])"}]
+    }
+  ]
+}

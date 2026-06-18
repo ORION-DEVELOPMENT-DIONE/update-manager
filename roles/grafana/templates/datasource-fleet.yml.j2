@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-Fleet
+    type: influxdb
+    access: proxy
+    url: http://localhost:{{ influxdb_port }}
+    isDefault: false
+    editable: true
+    jsonData:
+      version: Flux
+      organization: {{ influxdb_org }}
+      defaultBucket: fleet
+      tlsSkipVerify: false
+    secureJsonData:
+      token: {{ influxdb_admin_token }}
