@@ -97,6 +97,9 @@
     - role: screen-manager
       tags: screen-manager
 
+    - role: heartbeat
+      tags: heartbeat
+      
     - role: auto-update
       tags: auto-update
 
