@@ -90,3 +90,56 @@
     name: screen.service
     state: restarted
   when: service_file is changed
+
+- name: Ensure orion state directory exists
+  file:
+    path: /var/lib/orion
+    state: directory
+    owner: root
+    mode: '0755'
+
+- name: Ensure orion-update.log exists
+  file:
+    path: /var/log/orion-update.log
+    state: touch
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0664'
+  changed_when: false
+
+- name: Deploy auto-update script
+  copy:
+    src: orion-auto-update.sh
+    dest: /usr/local/bin/orion-auto-update.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Schedule auto-update cron (daily 03:00)
+  copy:
+    content: |
+      SHELL=/bin/bash
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      # Orion auto-update — fires if remote commit is >= 5 days old
+      0 3 * * * root /usr/local/bin/orion-auto-update.sh
+    dest: /etc/cron.d/orion-auto-update
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Logrotate for orion-update.log
+  copy:
+    content: |
+      /var/log/orion-update.log {
+          weekly
+          rotate 12
+          compress
+          delaycompress
+          missingok
+          notifempty
+          copytruncate
+      }
+    dest: /etc/logrotate.d/orion-update
+    owner: root
+    group: root
+    mode: '0644'
