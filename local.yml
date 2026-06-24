@@ -99,7 +99,10 @@
 
     - role: heartbeat
       tags: heartbeat
-      
+    
+    - role: dashboard
+      tags: dashboard      
+    
     - role: auto-update
       tags: auto-update
 

@@ -1,0 +1,26 @@
+[Unit]
+Description=Orion Energy Dashboard
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/orangepi/orion-dashboard/backend
+ExecStart=/usr/bin/python3 /home/orangepi/orion-dashboard/backend/app.py
+Restart=always
+RestartSec=10
+Environment=FLASK_ENV=production
+Environment=INFLUX_URL=http://localhost:8086
+Environment=INFLUX_ORG=orion
+Environment=INFLUX_BUCKET=energy_metrics
+Environment=INFLUX_TOKEN_FILE=/home/orangepi/.influxdb_token
+Environment=DASHBOARD_TOKEN_FILE=/etc/orion/dashboard.token
+Environment=STATIC_DIR=/home/orangepi/orion-dashboard/frontend
+Environment=DASHBOARD_PORT=3001
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=orion-dashboard
+User=root
+
+[Install]
+WantedBy=multi-user.target

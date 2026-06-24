@@ -1,0 +1,53 @@
+---
+# roles/dashboard/tasks/main.yml
+
+- name: Create dashboard directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    mode: '0755'
+  loop:
+    - /home/orangepi/orion-dashboard/backend
+    - /home/orangepi/orion-dashboard/frontend
+
+- name: Deploy backend
+  copy:
+    src: app.py
+    dest: /home/orangepi/orion-dashboard/backend/app.py
+    owner: root
+    mode: '0644'
+  notify: restart dashboard
+
+- name: Deploy frontend
+  copy:
+    src: index.html
+    dest: /home/orangepi/orion-dashboard/frontend/index.html
+    owner: root
+    mode: '0644'
+  notify: restart dashboard
+
+- name: Deploy tariff config (preserve existing)
+  copy:
+    src: tariff.json
+    dest: /etc/orion/tariff.json
+    owner: root
+    mode: '0644'
+    force: no
+
+- name: Deploy systemd unit
+  copy:
+    src: orion-dashboard.service
+    dest: /etc/systemd/system/orion-dashboard.service
+    owner: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart dashboard
+
+- name: Enable and start dashboard
+  systemd:
+    name: orion-dashboard.service
+    enabled: yes
+    state: started
+    daemon_reload: yes
