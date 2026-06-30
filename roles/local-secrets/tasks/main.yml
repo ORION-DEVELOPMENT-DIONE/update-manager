@@ -18,6 +18,25 @@
       Or copy secrets.yml from a provisioned device.
   when: not local_secrets.stat.exists
 
+- name: Ensure orion-secrets group exists
+  group:
+    name: orion-secrets
+    state: present
+
+- name: Set /etc/orion directory group
+  file:
+    path: /etc/orion
+    owner: root
+    group: orion-secrets
+    mode: '0750'
+
+- name: secrets.yml — root only (never group-readable)
+  file:
+    path: /etc/orion/secrets.yml
+    owner: root
+    group: root
+    mode: '0600'
+      
 - name: Validate required secrets are present
   assert:
     that:
