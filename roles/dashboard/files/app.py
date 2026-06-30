@@ -183,6 +183,11 @@ def _git_hash():
     except Exception:
         return "unknown"
 
+def _gateway_version():
+    try:
+        return Path("/etc/orion/gateway_version").read_text().strip()
+    except Exception:
+        return "unknown"
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=None)
@@ -514,6 +519,17 @@ def api_device():
             esp_hours = (esp_last_seen % 86400) // 3600
             esp_label = f"{esp_days}d {esp_hours}h ago"
 
+    # ESP32 firmware version from InfluxDB
+    esp_fw = "unknown"
+    fw_rows = _flux_query(f'''
+        from(bucket:"{INFLUX_BUCKET}")
+        |> range(start:-24h)
+        |> filter(fn:(r) => r._measurement == "energy" and r._field == "fw_version")
+        |> last()
+    ''')
+    if fw_rows:
+        esp_fw = str(fw_rows[0].get("_value", "unknown"))
+
     # Load average
     load_1m = 0
     try:
@@ -538,7 +554,7 @@ def api_device():
     return jsonify({
         "hostname": socket.gethostname(),
         "deviceId": "F8B3B77FEAF4",
-        "firmware": "1.2.0",
+        "gatewayVersion": _gateway_version(),
         "uptime": f"{days}d {hours}h",
         "uptimeSeconds": int(uptime),
         "cpuTemp": round(_cpu_temp(), 1),
@@ -549,6 +565,7 @@ def api_device():
         "wifiStrength": "good" if _wifi_rssi() > -60 else ("fair" if _wifi_rssi() > -75 else "poor"),
         "esp32LastSeen": esp_last_seen,
         "esp32LastSeenLabel": esp_label,
+        "esp32Version": esp_fw,
         "load1m": round(load_1m, 2),
         "updateStatus": update_status,
         "services": services,
