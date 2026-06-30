@@ -35,6 +35,51 @@
     mode: '0644'
     force: no
 
+- name: Bump gateway patch version on each deploy
+  shell: |
+    VER=$(cat /etc/orion/gateway_version 2>/dev/null || echo "1.0.0")
+    MAJOR=$(echo $VER | cut -d. -f1)
+    MINOR=$(echo $VER | cut -d. -f2)
+    PATCH=$(echo $VER | cut -d. -f3)
+    PATCH=$((PATCH + 1))
+    echo "$MAJOR.$MINOR.$PATCH" > /etc/orion/gateway_version
+  args:
+    executable: /bin/bash
+  changed_when: true
+  
+- name: Read current gateway version
+  slurp:
+    src: /etc/orion/gateway_version
+  register: current_gw_ver
+  ignore_errors: yes
+
+- name: Write gateway version file
+  copy:
+    content: "1.0.0"
+    dest: /etc/orion/gateway_version
+    owner: root
+    group: orion-secrets
+    mode: '0644'
+    force: no
+
+- name: Ensure orion-secrets group exists
+  group:
+    name: orion-secrets
+    state: present
+
+- name: Add orangepi to orion-secrets group
+  user:
+    name: orangepi
+    groups: orion-secrets
+    append: yes
+
+- name: Set dashboard.token group ownership
+  file:
+    path: /etc/orion/dashboard.token
+    owner: root
+    group: orion-secrets
+    mode: '0640'
+    
 - name: Deploy systemd unit
   copy:
     src: orion-dashboard.service
