@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Orion Solar Dashboard</title>
+<title>Orion Dashboard</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='12' fill='none' stroke='%2300DCC8' stroke-width='2'/><circle cx='16' cy='4' r='3' fill='%2300DCC8'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -134,7 +134,7 @@ function PhasesPage(){const T=useTheme();const mob=useMob();const[data,setData]=
   useEffect(()=>{const f=()=>api("/api/phases").then(d=>d&&setData(d)).catch(console.error);f();const id=setInterval(f,30000);return()=>clearInterval(id);},[]);
   const phases=data?.phases||[];const total=data?.totalPower||0;const connected=phases.filter(p=>p.connected);const disconnected=phases.filter(p=>!p.connected);const connCount=data?.connectedCount??0;const phaseCount=data?.phaseCount??null;
   const phaseColors={R:T.cyan,Y:T.violet,B:T.blue};
-  if(phaseCount===0&&data)return React.createElement("div",{className:"fade-in"},React.createElement("h1",{style:{fontSize:mob?20:24,fontWeight:800,color:T.white,marginBottom:20}},"Phase Analysis"),React.createElement(Card,{style:{textAlign:"center",padding:mob?"40px 20px":"60px 40px"}},React.createElement("div",{style:{fontSize:48,marginBottom:16}},"⚠️"),React.createElement("div",{style:{fontSize:18,fontWeight:700,color:T.orange,marginBottom:8}},"No Solar Sensors"),React.createElement("div",{style:{fontSize:13,color:T.dim,maxWidth:400,margin:"0 auto"}},"No CT sensors connected to solar inverter. Attach a current transformer to the inverter output to begin tracking solar production.")));
+  if(phaseCount===0&&data)return React.createElement("div",{className:"fade-in"},React.createElement("h1",{style:{fontSize:mob?20:24,fontWeight:800,color:T.white,marginBottom:20}},"Phase Analysis"),React.createElement(Card,{style:{textAlign:"center",padding:mob?"40px 20px":"60px 40px"}},React.createElement("div",{style:{fontSize:48,marginBottom:16}},"⚠️"),React.createElement("div",{style:{fontSize:18,fontWeight:700,color:T.orange,marginBottom:8}},"No CT Sensors"),React.createElement("div",{style:{fontSize:13,color:T.dim,maxWidth:400,margin:"0 auto"}},"No CT sensors connected to solar inverter. Attach a current transformer to the inverter output to begin tracking solar production.")));
   return React.createElement("div",{className:"fade-in"},
     React.createElement("div",{style:{marginBottom:mob?12:24}},React.createElement("h1",{style:{fontSize:mob?20:24,fontWeight:800,color:T.white}},"Phase Analysis"),React.createElement("p",{style:{fontSize:13,color:T.dim,marginTop:4}},connCount+" of 3 phases producing")),
     connected.length>0&&React.createElement(Card,{style:{marginBottom:mob?10:16}},React.createElement(Label,{style:{marginBottom:10}},"Production Balance"),React.createElement("div",{style:{display:"flex",gap:3,borderRadius:8,overflow:"hidden"}},connected.map((p,i)=>{const pct=total>0?(p.power/total*100):0;return React.createElement("div",{key:i,style:{flex:Math.max(pct,1),height:mob?28:32,display:"flex",alignItems:"center",justifyContent:"center",background:`linear-gradient(135deg,${phaseColors[p.label]}CC,${phaseColors[p.label]}66)`,fontSize:mob?10:12,fontWeight:700,color:T.chartText}},p.label+" · "+pct.toFixed(0)+"%");}))),
@@ -147,7 +147,7 @@ function DevicePage(){const T=useTheme();const mob=useMob();const[data,setData]=
   useEffect(()=>{const f=()=>api("/api/device").then(d=>d&&setData(d)).catch(console.error);f();const id=setInterval(f,30000);return()=>clearInterval(id);},[]);
   if(!data)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",minHeight:200,color:T.dim}},"Loading...");
   const rssi=data.wifiRssi;const wifiCol=rssi>-50?T.cyan:rssi>-65?T.cyan:rssi>-80?T.orange:T.red;
-  const info=[{l:"Device ID",v:data.deviceId},{l:"Firmware",v:"v"+data.firmware},{l:"Uptime",v:data.uptime}];
+  const info=[{l:"Device ID",v:data.deviceId},{l:"Gateway Firmware",v:"v"+data.gatewayVersion},{l:"Uptime",v:data.uptime},{l:"Meter Firmware",v:"v"+(data.esp32FwVersion||"unknown")}];
   const metrics=[{l:"Free Memory",v:data.memFreeMb>=1024?(data.memFreeMb/1024).toFixed(1)+" GB":data.memFreeMb+" MB",c:data.memFreeMb<500?T.red:T.cyan},{l:"Orion Meter Last Seen",v:data.esp32LastSeenLabel||"N/A",c:data.esp32LastSeen&&data.esp32LastSeen<1800?T.cyan:data.esp32LastSeen?T.orange:T.red},{l:"CPU Load",v:data.load1m,c:data.load1m>3?T.red:data.load1m>1?T.orange:T.cyan},{l:"Disk Free",v:Math.round(data.diskFreeMb/1024)+" GB",c:data.diskFreeMb<1024?T.red:T.cyan},{l:"CPU Temp",v:data.cpuTemp+"°C",c:data.cpuTemp>70?T.red:data.cpuTemp>55?T.orange:T.cyan},{l:"Update",v:data.updateStatus==="update-available"?"Available":"Up to Date",c:data.updateStatus==="update-available"?T.orange:T.cyan}];
   return React.createElement("div",{className:"fade-in"},
     React.createElement("h1",{style:{fontSize:mob?20:24,fontWeight:800,color:T.white,marginBottom:mob?12:24}},"Device"),
@@ -160,6 +160,103 @@ function DevicePage(){const T=useTheme();const mob=useMob();const[data,setData]=
       React.createElement(Card,null,React.createElement(Label,{style:{marginBottom:14}},"Health"),metrics.map((m,i)=>React.createElement("div",{key:i,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:i<metrics.length-1?`1px solid ${T.border}`:"none"}},React.createElement("span",{style:{fontSize:12,color:T.muted}},m.l),React.createElement("span",{style:{fontSize:13,fontWeight:700,color:m.c}},m.v))))));
 }
 
+// ── Analytics Page ───────────────────────────────────────────────────────────
+function AnalyticsPage(){const T=useTheme();const mob=useMob();const[hourly,setHourly]=useState(null);const[peaks,setPeaks]=useState(null);const[proj,setProj]=useState(null);const[comp,setComp]=useState(null);
+  useEffect(()=>{
+    Promise.all([
+      api("/api/analytics/hourly").then(d=>d&&setHourly(d)).catch(console.error),
+      api("/api/analytics/peaks").then(d=>d&&setPeaks(d)).catch(console.error),
+      api("/api/analytics/projection").then(d=>d&&setProj(d)).catch(console.error),
+      api("/api/analytics/compare").then(d=>d&&setComp(d)).catch(console.error),
+    ]);
+    const id=setInterval(()=>{
+      api("/api/analytics/hourly").then(d=>d&&setHourly(d)).catch(console.error);
+    },120000);
+    return()=>clearInterval(id);
+  },[]);
+  const Skel=(w,h=12)=>React.createElement("div",{style:{height:h,borderRadius:6,background:T.border,animation:"pulse 1.5s ease-in-out infinite",width:w||"60%",margin:"8px 0"}});
+  const maxPow=hourly?Math.max(...hourly.hours.map(h=>h.avgPower),1):1;
+  return React.createElement("div",{className:"fade-in"},
+    React.createElement("h1",{style:{fontSize:mob?20:24,fontWeight:800,color:T.white,marginBottom:mob?12:24}},"Analytics"),
+    React.createElement(Card,{style:{marginBottom:mob?10:16}},
+      React.createElement(Label,{style:{marginBottom:10}},"Hourly Solar Pattern (30-day avg)"),
+      !hourly
+        ?React.createElement("div",{style:{display:"flex",alignItems:"flex-end",gap:2,height:120}},
+            Array.from({length:24},(_,i)=>React.createElement("div",{key:i,style:{flex:1,height:(20+i%7*12)+"px",borderRadius:2,background:T.border,animation:`pulse ${1+i*0.04}s ease-in-out infinite`,animationDelay:i*0.05+"s"}}))
+          )
+        :React.createElement("div",null,
+            React.createElement("div",{style:{display:"flex",alignItems:"flex-end",gap:2,height:120}},
+              hourly.hours.map((h,i)=>{
+                const isPeak=h.avgPower>0&&h.avgPower===hourly.peakPower;
+                const barH=Math.max(maxPow>0?(h.avgPower/maxPow)*108:2,2);
+                return React.createElement("div",{key:i,title:h.label+": "+h.avgPower+"W",style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:120}},
+                  React.createElement("div",{style:{width:"100%",height:barH+"px",borderRadius:2,
+                    background:isPeak?`linear-gradient(to top,${T.orange},${T.orange}88)`:`linear-gradient(to top,${T.cyan}88,${T.cyan}33)`,
+                    boxShadow:isPeak?`0 0 8px ${T.orange}60`:undefined}}),
+                  (i%6===0||i===23)&&React.createElement("div",{style:{fontSize:7,color:T.muted,marginTop:3}},i+"h"));
+              })
+            ),
+            React.createElement("div",{style:{display:"flex",gap:mob?12:24,marginTop:10,flexWrap:"wrap"}},
+              React.createElement("span",{style:{fontSize:11,color:T.muted}},"Peak: ",React.createElement("span",{style:{color:T.orange,fontWeight:700}},hourly.peakPower+"W @ "+hourly.peakHour)),
+              React.createElement("span",{style:{fontSize:11,color:T.muted}},"Daily Avg: ",React.createElement("span",{style:{color:T.cyan,fontWeight:700}},hourly.avgPower+"W"))
+            )
+          )
+    ),
+    React.createElement(G,{cols:"1fr 1fr",mcols:"1fr",style:{marginBottom:mob?10:16}},
+      React.createElement(Card,null,
+        React.createElement(Label,{style:{marginBottom:10}},"Monthly Projection"),
+        !proj
+          ?React.createElement("div",null,Skel("60%",28),Skel("40%"))
+          :React.createElement("div",null,
+              React.createElement(Big,{v:proj.projectedMonthlyKwh+" kWh",c:T.cyan,sm:mob}),
+              React.createElement("div",{style:{fontSize:11,color:T.muted,marginTop:8}},
+                "Est. feed-in earnings: ",React.createElement("span",{style:{color:T.orange,fontWeight:700}},"€"+proj.projectedMonthlyCost),
+                " · Based on last "+proj.daysOfData+"d"
+              )
+            )
+      ),
+      React.createElement(Card,null,
+        React.createElement(Label,{style:{marginBottom:10}},"This Week vs Last Week"),
+        !comp
+          ?React.createElement("div",null,Skel("60%",28),Skel("40%"))
+          :React.createElement("div",null,
+              React.createElement("div",{style:{display:"flex",gap:24,alignItems:"flex-start",marginBottom:8}},
+                React.createElement("div",null,
+                  React.createElement("div",{style:{fontSize:10,color:T.muted,marginBottom:4,letterSpacing:"0.06em"}},"THIS WEEK"),
+                  React.createElement(Big,{v:comp.thisWeek.totalKwh+" kWh",c:T.cyan,sm:mob})
+                ),
+                React.createElement("div",null,
+                  React.createElement("div",{style:{fontSize:10,color:T.muted,marginBottom:4,letterSpacing:"0.06em"}},"LAST WEEK"),
+                  React.createElement(Big,{v:comp.lastWeek.totalKwh+" kWh",c:T.dim,sm:mob})
+                )
+              ),
+              React.createElement("div",{style:{fontSize:13,fontWeight:700,color:comp.changePct>=0?T.cyan:T.red}},
+                (comp.changePct>=0?"+":"")+comp.changePct+"% vs last week"
+              )
+            )
+      )
+    ),
+    React.createElement(Card,null,
+      React.createElement(Label,{style:{marginBottom:10}},"Peak Solar Output Events (last 30d)"),
+      !peaks
+        ?React.createElement("div",null,
+            [80,65,72,55,68].map((w,i)=>React.createElement("div",{key:i,style:{height:12,borderRadius:6,background:T.border,animation:`pulse ${1.2+i*0.1}s ease-in-out infinite`,animationDelay:i*0.1+"s",width:w+"%",margin:"12px 0"}}))
+          )
+        :!peaks.peaks.length
+          ?React.createElement("div",{style:{textAlign:"center",padding:"24px 0",color:T.muted,fontSize:13}},"No peak events in last 30 days")
+          :React.createElement("div",null,
+              peaks.peaks.map((pk,i)=>React.createElement("div",{key:i,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<peaks.peaks.length-1?`1px solid ${T.border}`:"none"}},
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+                  React.createElement("span",{style:{fontSize:11,fontWeight:700,color:T.orange,background:`${T.orange}18`,padding:"2px 8px",borderRadius:10}},"#"+(i+1)),
+                  React.createElement("span",{style:{fontSize:12,color:T.body}},pk.label)
+                ),
+                React.createElement("span",{style:{fontSize:13,fontWeight:800,color:T.orange}},pk.power.toLocaleString()+" W")
+              ))
+            )
+    )
+  );
+}
+
 // ── App ──────────────────────────────────────────────────────────────────────
 const PAGES=[{id:"today",icon:"⚡",label:"Dashboard"},{id:"history",icon:"📈",label:"History"},{id:"phases",icon:"🔌",label:"Phase Analysis"},{id:"analytics",icon:"💡",label:"Analytics"},{id:"device",icon:"📡",label:"Device"}];
 function App(){const[page,setPage]=useState("today");const[themeName,setThemeName]=useState(()=>getCookie("orion_theme")||"dark");const T=THEMES[themeName];const mob=useIsMobile();
@@ -168,7 +265,7 @@ function App(){const[page,setPage]=useState("today");const[themeName,setThemeNam
     React.createElement("div",{style:{display:"flex",flexDirection:mob?"column":"row",minHeight:"100vh",background:T.bgDeep,color:T.body,transition:"background 0.3s"}},
       // ── Desktop Sidebar ────────────────────────────────────────────────
       !mob&&React.createElement("div",{style:{width:220,minHeight:"100vh",background:T.sidebarBg,borderRight:`1px solid ${T.border}`,padding:"20px 12px",display:"flex",flexDirection:"column",position:"fixed",left:0,top:0,zIndex:10,backdropFilter:"blur(16px)"}},
-        React.createElement("div",{style:{padding:"4px 14px 24px",display:"flex",alignItems:"center",gap:10}},React.createElement("svg",{width:36,height:36,viewBox:"0 0 40 40",style:{animation:"orbit 20s linear infinite"}},React.createElement("circle",{cx:20,cy:20,r:14,fill:"none",stroke:T.cyan,strokeWidth:"1",opacity:"0.3"}),React.createElement("circle",{cx:20,cy:20,r:8,fill:"none",stroke:T.violet,strokeWidth:"1",opacity:"0.4"}),React.createElement("circle",{cx:20,cy:6,r:2.5,fill:T.cyan,opacity:"0.9"}),React.createElement("circle",{cx:28,cy:28,r:1.5,fill:T.violet,opacity:"0.8"})),React.createElement("div",null,React.createElement("div",{style:{fontSize:18,fontWeight:800,color:T.white,letterSpacing:"0.04em"}},"ORION"),React.createElement("div",{style:{fontSize:9,fontWeight:500,color:T.muted,letterSpacing:"0.12em"}},"SOLAR DASHBOARD"))),
+        React.createElement("div",{style:{padding:"4px 14px 24px",display:"flex",alignItems:"center",gap:10}},React.createElement("svg",{width:36,height:36,viewBox:"0 0 40 40",style:{animation:"orbit 20s linear infinite"}},React.createElement("circle",{cx:20,cy:20,r:14,fill:"none",stroke:T.cyan,strokeWidth:"1",opacity:"0.3"}),React.createElement("circle",{cx:20,cy:20,r:8,fill:"none",stroke:T.violet,strokeWidth:"1",opacity:"0.4"}),React.createElement("circle",{cx:20,cy:6,r:2.5,fill:T.cyan,opacity:"0.9"}),React.createElement("circle",{cx:28,cy:28,r:1.5,fill:T.violet,opacity:"0.8"})),React.createElement("div",null,React.createElement("div",{style:{fontSize:18,fontWeight:800,color:T.white,letterSpacing:"0.04em"}},"ORION"),React.createElement("div",{style:{fontSize:9,fontWeight:500,color:T.muted,letterSpacing:"0.12em"}},"DASHBOARD"))),
         React.createElement("div",{style:{height:1,background:T.border,margin:"0 8px 16px"}}),
         React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",gap:4}},PAGES.map(p=>React.createElement("button",{key:p.id,onClick:()=>setPage(p.id),style:{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:page===p.id?`1px solid ${T.activeBorder}`:"1px solid transparent",background:page===p.id?T.activeBg:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:page===p.id?600:500,color:page===p.id?T.white:T.dim,width:"100%",textAlign:"left"}},React.createElement("span",{style:{fontSize:16,width:20,textAlign:"center"}},p.icon),p.label))),
         React.createElement("button",{onClick:toggle,style:{margin:"8px 8px 4px",padding:"10px 14px",borderRadius:10,border:`1px solid ${T.border}`,background:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500,color:T.dim,display:"flex",alignItems:"center",gap:8}},React.createElement("span",{style:{fontSize:16}},themeName==="dark"?"☀️":"🌙"),themeName==="dark"?"Light":"Dark"),

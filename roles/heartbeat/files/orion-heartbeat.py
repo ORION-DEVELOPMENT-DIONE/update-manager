@@ -121,16 +121,17 @@ def update_failures_24h():
     except Exception:
         return 0
 
-def esp32_last_seen_s():
-    """Query local InfluxDB: seconds since last energy metric."""
+def _influx_query_csv(field, measurement="energy", bucket="energy_metrics"):
+    """Run a last() Flux query and return parsed (timestamp, value_str) or None."""
+    from datetime import datetime
     try:
-        q = ('from(bucket:"energy_metrics") |> range(start:-1h) '
-             '|> filter(fn:(r) => r._measurement == "energy" '
-             'and r._field == "voltage") '
+        q = (f'from(bucket:"{bucket}") |> range(start:-1h) '
+             f'|> filter(fn:(r) => r._measurement == "{measurement}" '
+             f'and r._field == "{field}") '
              '|> last()')
         token = _read("/home/orangepi/.influxdb_token")
         if not token:
-            return -1
+            return None
         req = urllib.request.Request(
             f"{LOCAL_INFLUX}/api/v2/query?org=orion",
             data=q.encode(),
@@ -140,17 +141,58 @@ def esp32_last_seen_s():
         )
         with urllib.request.urlopen(req, timeout=3) as r:
             body = r.read().decode()
-            from datetime import datetime
             for line in body.splitlines():
                 if line.startswith(",") and "T" in line:
                     parts = line.split(",")
-                    # _time is column index 5 in default Flux CSV format
-                    if len(parts) > 5 and "T" in parts[5]:
+                    # Flux CSV columns: ,result,table,_start,_stop,_time,_value,...
+                    if len(parts) > 6 and "T" in parts[5]:
                         ts = datetime.fromisoformat(parts[5].replace("Z", "+00:00"))
-                        return int(time.time() - ts.timestamp())
+                        return ts, parts[6].strip()
     except Exception as e:
-        log.debug(f"ESP32 lookup failed: {e}")
+        log.debug(f"InfluxDB query ({field}) failed: {e}")
+    return None
+
+
+def esp32_last_seen_s():
+    """Query local InfluxDB: seconds since last energy metric."""
+    result = _influx_query_csv("voltage")
+    if result:
+        ts, _ = result
+        return int(time.time() - ts.timestamp())
     return -1
+
+
+def esp32_fw_version():
+    """Query local InfluxDB: latest ESP32 firmware version string."""
+    result = _influx_query_csv("fw_version")
+    if result:
+        _, val = result
+        return val if val else "unknown"
+    return "unknown"
+
+
+def esp32_wifi_rssi():
+    """Query local InfluxDB: latest ESP32 WiFi RSSI (dBm)."""
+    result = _influx_query_csv("wifi_rssi")
+    if result:
+        _, val = result
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            pass
+    return -99
+
+
+def esp32_free_heap():
+    """Query local InfluxDB: latest ESP32 free heap bytes."""
+    result = _influx_query_csv("free_heap")
+    if result:
+        _, val = result
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            pass
+    return 0
 
 
 # ── Line protocol formatter ───────────────────────────────────────────────────
@@ -168,10 +210,13 @@ def build_line():
         "tailscale_active":    service_active("tailscaled"),
         "update_failures_24h": update_failures_24h(),
         "esp32_last_seen_s":   esp32_last_seen_s(),
+        "esp32_wifi_rssi":     esp32_wifi_rssi(),
+        "esp32_free_heap":     esp32_free_heap(),
     }
     fields_str = {
-        "git_hash":    git_hash(),
-        "last_update": upd_status,
+        "git_hash":         git_hash(),
+        "last_update":      upd_status,
+        "esp32_fw_version": esp32_fw_version(),
     }
     tags = {
         "host":         host,
